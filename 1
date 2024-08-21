@@ -1,0 +1,167 @@
+import {Component} from 'react'
+import {Loader} from 'react-loader-spinner'
+import FailureView from '../FailureView'
+import ProjectItem from '../ProjectItem'
+import './index.css'
+
+const categoriesList = [
+  {id: 'ALL', displayText: 'All'},
+  {id: 'STATIC', displayText: 'Static'},
+  {id: 'RESPONSIVE', displayText: 'Responsive'},
+  {id: 'DYNAMIC', displayText: 'Dynamic'},
+  {id: 'REACT', displayText: 'React'},
+]
+
+const apiStatusConstants = {
+  initial: 'INITIAL',
+  inProgress: 'IN PROGRESS',
+  success: 'SUCCESS',
+  failure: 'FAILURE',
+}
+
+class ProjectsShowcase extends Component {
+  state = {
+    apiStatus: apiStatusConstants.initial,
+    activeTabId: categoriesList[0].id,
+    projectsData: [],
+  }
+
+  componentDidMount() {
+    this.getProjectDetails()
+  }
+
+  getProjectDetails = async () => {
+    const {activeTabId} = this.state
+    this.setState({apiStatus: apiStatusConstants.inProgress})
+    const apiUrl = `https://apis.ccbp.in/ps/projects?category=${activeTabId}`
+    try {
+      const response = await fetch(apiUrl)
+      console.log(response)
+      if (response.ok === true) {
+        const {projects} = await response.json()
+        const parsedData = projects.map(eachProject => ({
+          id: eachProject.id,
+          name: eachProject.name,
+          imageUrl: eachProject.image_url,
+        }))
+        this.setState({
+          apiStatus: apiStatusConstants.success,
+          projectsData: parsedData,
+        })
+      } else {
+        this.setState({apiStatus: apiStatusConstants.failure})
+      }
+    } catch (error) {
+      this.setState({apiStatus: apiStatusConstants.failure})
+    }
+  }
+
+  renderSuccessView = () => {
+    const {projectsData} = this.state
+    return (
+      <ul className="projects-list-container">
+        {projectsData.map(eachProjectItem => (
+          <ProjectItem
+            key={eachProjectItem.id}
+            projectDetails={eachProjectItem}
+          />
+        ))}
+      </ul>
+    )
+  }
+
+  onChangeInputItem = event => {
+    this.setState({activeTabId: event.target.value})
+  }
+
+  renderLoadingView = () => (
+    <div className="loading-view-container">
+      <Loader type="ThreeDots" height="50" width="100" color="#328af2" />
+    </div>
+  )
+
+  renderFailureView = () => <FailureView />
+
+  apiStateBasedRendering = () => {
+    const {apiStatus} = this.state
+    switch (apiStatus) {
+      case apiStatusConstants.inProgress:
+        return this.renderLoadingView()
+      case apiStatusConstants.failure:
+        return this.renderFailureView()
+      case apiStatusConstants.success:
+        return this.renderSuccessView()
+      default:
+        return null
+    }
+  }
+
+  render() {
+    const {activeTabId} = this.state
+    return (
+      <div className="projects-bg-container">
+        <div className="projects-header">
+          <img
+            className="projects-header-logo"
+            src="https://assets.ccbp.in/frontend/react-js/projects-showcase/website-logo-img.png"
+            alt="website logo"
+          />
+        </div>
+        <div className="projects-container">
+          <select
+            className="projects-input-container"
+            value={activeTabId}
+            onChange={this.onChangeInputItem}
+          >
+            {categoriesList.map(eachItem => (
+              <option
+                className="search-items"
+                value={eachItem.id}
+                key={eachItem.id}
+              >
+                {eachItem.displayText}
+              </option>
+            ))}
+          </select>
+          {this.apiStateBasedRendering()}
+        </div>
+      </div>
+    )
+  }
+}
+
+export default ProjectsShowcase
+import './index.css'
+
+const ProjectItem = props => {
+  const {projectDetails} = props
+  const {name, imageUrl} = projectDetails
+  return (
+    <li className="project-item">
+      <img className="project-img" src={imageUrl} alt={name} />
+      <h1 className="project-item-name">{name}</h1>
+    </li>
+  )
+}
+
+export default ProjectItem
+import './index.css'
+
+const FailureView = () => (
+  <div className="failure-view-container">
+    <img
+      className="failure-view-img"
+      alt="failure view"
+      src="https://assets.ccbp.in/frontend/react-js/projects-showcase/failure-img.png"
+    />
+    <h1 className="failure-view-heading">Oops! Something Went Wrong</h1>
+    <p className="failure-view-description">
+      We cannot seen to find the page you are looking for.
+    </p>
+    <button className="retry-button" type="button">
+      Retry
+    </button>
+  </div>
+)
+
+export default FailureView
